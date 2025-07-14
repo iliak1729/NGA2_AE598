@@ -330,10 +330,14 @@ contains
          this%time(1)=time
       else
          ! There are time stamps already, check where to insert
-         n=this%ntime+1
-         do i=this%ntime,1,-1
-            if (time.le.this%time(i)) n=n-1
-         end do
+         n=1
+         rewind: do i=this%ntime,1,-1
+            ! Convert time to appropriate accuracy before comparing
+            ctime=''; write(ctime,'(es12.5)') time; read(ctime,'(es12.5)') rtime
+            if (this%time(i).lt.rtime) then
+               n=i+1; exit rewind
+            end if
+         end do rewind
          this%ntime=n; allocate(temp_time(1:this%ntime))
          temp_time=[this%time(1:this%ntime-1),time]
          call move_alloc(temp_time,this%time)
@@ -626,7 +630,7 @@ contains
       character(len=80) :: cbuff
       real(SP) :: rbuff
       integer :: ibuff
-
+      
       ! Write the case file from scratch in ASCII format
       if (this%cfg%amRoot) then
          ! Open the case file
@@ -854,7 +858,7 @@ contains
             open(newunit=iunit,file=trim(filename),form='unformatted',status='replace',access='stream',iostat=ierr)
             if (ierr.ne.0) call die('[ensight write part] Could not open file: '//trim(filename))
             ! General header
-            cbuff='particle'//trim(adjustl(part%ptr%vecname(n)))     ; write(iunit) cbuff
+            cbuff='particle '//trim(adjustl(part%ptr%vecname(n))); write(iunit) cbuff
             ! Close the file
             close(iunit)
          end if
